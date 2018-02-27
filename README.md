@@ -11,7 +11,7 @@ which this wraps. See the [official docs](https://auth0.com/docs/libraries/auth0
 
 Example
 
-```
+```clj
 (ns my.app
   (:require [lifecheq/re-auth0.core :as re-auth0]
             ...))

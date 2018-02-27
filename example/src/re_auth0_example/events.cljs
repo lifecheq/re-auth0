@@ -17,39 +17,30 @@
 (re-frame/reg-event-fx
  ::initialize-web-auth
  (fn [_ _]
-   {::re-auth0/web-auth {:method    :init
-                         :domain    "brucke.auth0.com"
-                         :client-id "k5u3o2fiAA8XweXEEX604KCwCjzjtMU6"}}))
+   {::re-auth0/init {:domain        "brucke.auth0.com"
+                     :client-id     "k5u3o2fiAA8XweXEEX604KCwCjzjtMU6"
+                     :response-type "token"
+                     :redirect-uri  "http://localhost:3000"}}))
 
 (re-frame/reg-event-fx
  ::parse-hash
  (fn [_ _]
-   {::re-auth0/web-auth {:method           :parse-hash
-                         :options          {}
-                         :on-authenticated [::print]
-                         :on-error         [::print]}}))
+   {::re-auth0/parse-hash {:on-authenticated [::print]
+                           :on-error         [::print]}}))
 
 (re-frame/reg-event-fx
  ::login-hosted
  (fn [_ _]
-   {::re-auth0/web-auth {:method :authorize
-                         :options {:responseType "token"
-                                   :redirectUri "http://localhost:3000"}}}))
+   {::re-auth0/authorize {}}))
 
 (re-frame/reg-event-fx
  ::login-facebook
  (fn [_ _]
-   {::re-auth0/web-auth {:method  :authorize
-                         :options {:responseType "token"
-                                   :connection   "facebook"
-                                   :redirectUri  "http://localhost:3000"}}}))
+   {::re-auth0/authorize {:connection "facebook"}}))
 
 (re-frame/reg-event-fx
  ::check-session
  (fn [_ _]
-   {::re-auth0/web-auth {:method :check-session
-                         :options {:responseType "token"
-                                   :connection   "facebook"
-                                   :redirectUri  "http://localhost:3000"}
-                         :on-authenticated [::print]
-                         :on-error [::print]}}))
+   {::re-auth0/check-session {:connection       "facebook"
+                              :on-authenticated [::print]
+                              :on-error         [::print]}}))

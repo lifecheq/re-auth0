@@ -3,7 +3,7 @@
                  [org.clojure/clojurescript "1.9.908"]
                  [reagent "0.7.0"]
                  [re-frame "0.10.5"]
-                 [lifecheq/re-auth0 "0.1.0"]]
+                 [lifecheq/re-auth0 "0.1.1"]]
 
   :plugins [[lein-cljsbuild "1.1.5"]]
 
