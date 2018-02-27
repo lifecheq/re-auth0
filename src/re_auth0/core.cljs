@@ -36,11 +36,6 @@
                         :responseType response-type
                         :responseMode response-mode}))))
 
-(defn make-web-auth
-  [client-id domain]
-  (web-auth {:domain    domain
-             :client-id client-id}))
-
 (defn auth-results-cb
   [on-auth-result on-error]
   (fn [err auth-result]
@@ -105,34 +100,6 @@
                              :timeout      timeout}))
                  (auth-results-cb on-authenticated
                                   on-error)))
-
-(defn web-auth-fx
-  [value]
-  (let [web-auth @web-auth-instance]
-    (case (:method value)
-      :init          (reset! web-auth-instance
-                             (make-web-auth (:client-id value)
-                                            (:domain value)))
-      :authorize     (authorize web-auth
-                                (:options value)
-                                (:on-authenticated value)
-                                (:on-error value))
-      :parse-hash    (parse-hash web-auth
-                                 (:options value)
-                                 (:on-authenticated value)
-                                 (:on-error value))
-      :logout        (.logout web-auth
-                              (clj->js {:returnTo (:return-to value)
-                                        :clientID (:client-id value)}))
-      :check-session (check-session web-auth
-                                    (:options value)
-                                    (:on-authenticated value)
-                                    (:on-error value))
-      nil)))
-
-(re-frame/reg-fx
- ::web-auth
- web-auth-fx)
 
 (re-frame/reg-fx
  ::init
