@@ -25,4 +25,5 @@
       {:on-click #(re-frame/dispatch [::events/login-facebook])}
       "Facebook login"]
      [:h3 "Check if you have an active session"]
-     [button [::events/check-session] "Check session"]]))
+     [button [::events/check-session] "Check session"]
+     [button [::events/logout] "Logout"]]))

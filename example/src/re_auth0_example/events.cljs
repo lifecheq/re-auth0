@@ -44,3 +44,8 @@
    {::re-auth0/check-session {:connection       "facebook"
                               :on-authenticated [::print]
                               :on-error         [::print]}}))
+
+(re-frame/reg-event-fx
+ ::logout
+ (fn [_ _]
+   {::re-auth0/logout {:return-to "http://localhost:3000"}}))
