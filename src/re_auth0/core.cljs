@@ -3,7 +3,9 @@
             [clojure.walk :as walk]
             [re-frame.core :as re-frame]))
 
+
 (defonce web-auth-instance (atom nil))
+
 
 (defn *js->clj
   "Always keywordize keys"
@@ -22,6 +24,7 @@
                        x))
                    m)))
 
+
 (defn web-auth
   "Builds the WebAuth object."
   [{:keys [domain client-id redirect-uri scope
@@ -36,6 +39,7 @@
                         :responseType response-type
                         :responseMode response-mode}))))
 
+
 (defn auth-results-cb
   [on-auth-result on-error]
   (fn [err auth-result]
@@ -43,6 +47,7 @@
       (re-frame/dispatch (conj on-error (*js->clj err)))
       (re-frame/dispatch (conj on-auth-result
                                (*js->clj auth-result))))))
+
 
 (defn parse-hash
   [web-auth {:keys [hash state nonce]}
@@ -55,6 +60,7 @@
               (auth-results-cb on-authenticated
                                on-error))
   (set! (.-hash js/window.location) ""))
+
 
 (defn authorize
   "The basic authorize"
@@ -74,6 +80,7 @@
               (auth-results-cb on-authenticated
                                on-error)))
 
+
 (defn logout
   "Logout"
   [web-auth {:keys [return-to client-id]}]
@@ -81,6 +88,7 @@
                      (remove-nils-and-empty
                       {:returnTo return-to
                        :clientID client-id}))))
+
 
 (defn check-session
   "Check session"
@@ -101,10 +109,15 @@
                  (auth-results-cb on-authenticated
                                   on-error)))
 
+
+;; Registering re-frame effects
+
+
 (re-frame/reg-fx
  ::init
  (fn [options]
    (reset! web-auth-instance (web-auth options))))
+
 
 (re-frame/reg-fx
  ::authorize
@@ -114,6 +127,7 @@
               on-authenticated
               on-error)))
 
+
 (re-frame/reg-fx
  ::parse-hash
  (fn [{:keys [on-authenticated on-error] :as options}]
@@ -122,11 +136,13 @@
                on-authenticated
                on-error)))
 
+
 (re-frame/reg-fx
  ::logout
  (fn [options]
    (logout @web-auth-instance
            options)))
+
 
 (re-frame/reg-fx
  ::check-session
