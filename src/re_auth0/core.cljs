@@ -110,6 +110,79 @@
                                   on-error)))
 
 
+(defn passwordless-start
+  "Start passwordless authentication"
+  [web-auth {:keys [connection send phone-number email]}
+   on-authenticated on-error]
+  (.passwordlessStart web-auth (clj->js
+                                (remove-nils-and-empty
+                                 {:connection  connection
+                                  :send        send
+                                  :email       email
+                                  :phoneNumber phone-number}))
+                      (auth-results-cb on-authenticated
+                                       on-error)))
+
+
+(defn passwordless-login
+  "Enter code for passwordless login"
+  [web-auth {:keys [connection code phone-number email]}
+   on-authenticated on-error]
+  (.passwordlessLogin web-auth (clj->js
+                                (remove-nils-and-empty
+                                 {:connection       connection
+                                  :verificationCode code
+                                  :email            email
+                                  :phoneNumber      phone-number}))
+                      (auth-results-cb on-authenticated
+                                       on-error)))
+
+
+(defn signup
+  "Signs up using username password"
+  [web-auth {:keys [username email password connection metadata]}
+   on-signup on-error]
+  (.signup web-auth (clj->js
+                     (remove-nils-and-empty
+                      {:username      username
+                       :email         email
+                       :password      password
+                       :connection    connection
+                       :user_metadata metadata}))
+           (fn [err]
+             (when err
+               (re-frame/dispatch (conj on-error err))
+               (re-frame/dispatch on-signup)))))
+
+
+(defn login
+  "Logs in user username and password"
+  [web-auth {:keys [username email password connection]}
+   on-authenticated on-error]
+  (.login web-auth (clj->js
+                    (remove-nils-and-empty
+                     {:username username
+                      :email    email
+                      :password password
+                      :realm    connection}))
+          (auth-results-cb on-authenticated
+                           on-error)))
+
+
+(defn reset-password
+  "Requests a password reset"
+  [web-auth {:keys [email connection]}
+   on-success on-error]
+  (.changePassword web-auth (clj->js
+                             (remove-nils-and-empty
+                              {:email      email
+                               :connection connection}))
+                   (fn [err resp]
+                     (if err
+                       (re-frame/dispatch (conj on-error err))
+                       (re-frame/dispatch (conj on-success resp))))))
+
+
 ;; Registering re-frame effects
 
 
@@ -151,3 +224,48 @@
                   options
                   on-authenticated
                   on-error)))
+
+
+(re-frame/reg-fx
+ ::passwordless-start
+ (fn [{:keys [on-authenticated on-error] :as options}]
+   (passwordless-start @web-auth-instance
+                       options
+                       on-authenticated
+                       on-error)))
+
+
+(re-frame/reg-fx
+ ::passwordless-login
+ (fn [{:keys [on-authenticated on-error] :as options}]
+   (passwordless-login @web-auth-instance
+                       options
+                       on-authenticated
+                       on-error)))
+
+
+(re-frame/reg-fx
+ ::signup
+ (fn [{:keys [on-success on-error] :as options}]
+   (signup @web-auth-instance
+           options
+           on-success
+           on-error)))
+
+
+(re-frame/reg-fx
+ ::login
+ (fn [{:keys [on-authenticated on-error] :as options}]
+   (login @web-auth-instance
+          options
+          on-authenticated
+          on-error)))
+
+
+(re-frame/reg-fx
+ ::reset-password
+ (fn [{:keys [on-success on-error] :as options}]
+   (reset-password @web-auth-instance
+                   options
+                   on-success
+                   on-error)))
