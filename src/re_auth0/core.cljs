@@ -81,6 +81,25 @@
                                on-error)))
 
 
+(defn popup-authorize
+  "Popup variant"
+  [web-auth {:keys [audience connection scope response-type
+                    client-id redirect-uri leeway state]}
+   on-authenticated on-error]
+  (.authorize (.-popup web-auth)
+              (clj->js (remove-nils-and-empty
+                        {:audience     audience
+                         :connection   connection
+                         :scope        scope
+                         :responseType response-type
+                         :clientID     client-id
+                         :redirectUri  redirect-uri
+                         :leeway       leeway
+                         :state        state}))
+              (auth-results-cb on-authenticated
+                               on-error)))
+
+
 (defn logout
   "Logout"
   [web-auth {:keys [return-to client-id]}]
@@ -199,6 +218,15 @@
               options
               on-authenticated
               on-error)))
+
+
+(re-frame/reg-fx
+ ::popup-authorize
+ (fn [{:keys [on-authenticated on-error] :as options}]
+   (popup-authorize @web-auth-instance
+                    options
+                    on-authenticated
+                    on-error)))
 
 
 (re-frame/reg-fx
