@@ -7,10 +7,19 @@
 (defonce web-auth-instance (atom nil))
 
 
+(defonce auth0-app-state (atom {}))
+
+
+(defn local-storage-key []
+  (str "auth0."
+       (-> @app-state :info :client-id)))
+
+
 (defn *js->clj
   "Always keywordize keys"
   [js]
   (js->clj js :keywordize-keys true))
+
 
 (defn remove-nils-and-empty
   "Take a map, and remove all nil or empty values"
@@ -25,38 +34,53 @@
                    m)))
 
 
+(defn *clj->js
+  "Nil-prune too"
+  [clj]
+  (clj->js (remove-nils-and-empty clj)))
+
+
 (defn web-auth
   "Builds the WebAuth object."
   [{:keys [domain client-id redirect-uri scope
            audience response-type response-mode]}]
-  (js/auth0.WebAuth. (clj->js
-                      (remove-nils-and-empty
-                       {:domain       domain
-                        :clientID     client-id
-                        :redirectUri  redirect-uri
-                        :scope        scope
-                        :audience     audience
-                        :responseType response-type
-                        :responseMode response-mode}))))
+  (js/auth0.WebAuth. (*clj->js
+                      {:domain       domain
+                       :clientID     client-id
+                       :redirectUri  redirect-uri
+                       :scope        scope
+                       :audience     audience
+                       :responseType response-type
+                       :responseMode response-mode})))
 
 
 (defn auth-results-cb
   [on-auth-result on-error]
   (fn [err auth-result]
     (if err
-      (re-frame/dispatch (conj on-error (*js->clj err)))
-      (re-frame/dispatch (conj on-auth-result
-                               (*js->clj auth-result))))))
+      (if on-error
+        (re-frame/dispatch (conj on-error (*js->clj err)))
+        (when-let [defautl-on-error (:on-error @app-state)]
+          (re-frame/dispatch (conj defautl-on-error (*js->clj err)))))
+      (do
+        (.setItem (.-localStorage js/window)
+                  (local-storage-key)
+                  (.stringify js/JSON auth-result))
+        (if on-auth-result
+          (re-frame/dispatch (conj on-auth-result
+                                   (*js->clj auth-result)))
+          (when-let [default-on-auth-result (:on-authenticated @app-state)]
+            (re-frame/dispatch (conj default-on-auth-result
+                                     (*js->clj auth-result)))))))))
 
 
 (defn parse-hash
   [web-auth {:keys [hash state nonce]}
    on-authenticated on-error]
-  (.parseHash web-auth (clj->js
-                        (remove-nils-and-empty
-                         {:hash hash
-                          :state state
-                          :nonce nonce}))
+  (.parseHash web-auth (*clj->js
+                        {:hash hash
+                         :state state
+                         :nonce nonce})
               (auth-results-cb on-authenticated
                                on-error))
   (set! (.-hash js/window.location) ""))
@@ -67,16 +91,15 @@
   [web-auth {:keys [audience connection scope response-type
                     client-id redirect-uri leeway state]}
    on-authenticated on-error]
-  (.authorize web-auth (clj->js
-                        (remove-nils-and-empty
-                         {:audience     audience
-                          :connection   connection
-                          :scope        scope
-                          :responseType response-type
-                          :clientID     client-id
-                          :redirectUri  redirect-uri
-                          :leeway       leeway
-                          :state        state}))
+  (.authorize web-auth (*clj->js
+                        {:audience     audience
+                         :connection   connection
+                         :scope        scope
+                         :responseType response-type
+                         :clientID     client-id
+                         :redirectUri  redirect-uri
+                         :leeway       leeway
+                         :state        state})
               (auth-results-cb on-authenticated
                                on-error)))
 
@@ -87,15 +110,14 @@
                     client-id redirect-uri leeway state]}
    on-authenticated on-error]
   (.authorize (.-popup web-auth)
-              (clj->js (remove-nils-and-empty
-                        {:audience     audience
+              (*clj->js {:audience     audience
                          :connection   connection
                          :scope        scope
                          :responseType response-type
                          :clientID     client-id
                          :redirectUri  redirect-uri
                          :leeway       leeway
-                         :state        state}))
+                         :state        state})
               (auth-results-cb on-authenticated
                                on-error)))
 
@@ -103,10 +125,9 @@
 (defn logout
   "Logout"
   [web-auth {:keys [return-to client-id]}]
-  (.logout web-auth (clj->js
-                     (remove-nils-and-empty
-                      {:returnTo return-to
-                       :clientID client-id}))))
+  (.logout web-auth
+           (*clj->js {:returnTo return-to
+                      :clientID client-id})))
 
 
 (defn check-session
@@ -114,17 +135,16 @@
   [web-auth {:keys [domain client-id response-type state nonce
                     redirect-uri scope audience timeout]}
    on-authenticated on-error]
-  (.checkSession web-auth (clj->js
-                           (remove-nils-and-empty
-                            {:domain       domain
-                             :clientID     client-id
-                             :responseType response-type
-                             :state        state
-                             :nonce        nonce
-                             :redirectUri  redirect-uri
-                             :scope        scope
-                             :audience     audience
-                             :timeout      timeout}))
+  (.checkSession web-auth (*clj->js
+                           {:domain       domain
+                            :clientID     client-id
+                            :responseType response-type
+                            :state        state
+                            :nonce        nonce
+                            :redirectUri  redirect-uri
+                            :scope        scope
+                            :audience     audience
+                            :timeout      timeout})
                  (auth-results-cb on-authenticated
                                   on-error)))
 
@@ -133,12 +153,11 @@
   "Start passwordless authentication"
   [web-auth {:keys [connection send phone-number email]}
    on-authenticated on-error]
-  (.passwordlessStart web-auth (clj->js
-                                (remove-nils-and-empty
-                                 {:connection  connection
-                                  :send        send
-                                  :email       email
-                                  :phoneNumber phone-number}))
+  (.passwordlessStart web-auth (*clj->js
+                                {:connection  connection
+                                 :send        send
+                                 :email       email
+                                 :phoneNumber phone-number})
                       (auth-results-cb on-authenticated
                                        on-error)))
 
@@ -147,43 +166,48 @@
   "Enter code for passwordless login"
   [web-auth {:keys [connection code phone-number email]}
    on-authenticated on-error]
-  (.passwordlessLogin web-auth (clj->js
-                                (remove-nils-and-empty
-                                 {:connection       connection
-                                  :verificationCode code
-                                  :email            email
-                                  :phoneNumber      phone-number}))
+  (.passwordlessLogin web-auth (*clj->js
+                                {:connection       connection
+                                 :verificationCode code
+                                 :email            email
+                                 :phoneNumber      phone-number})
                       (auth-results-cb on-authenticated
                                        on-error)))
+
+
+(defn dispatch-error
+  [on-error err]
+  (if on-error
+    (re-frame/dispatch (conj on-error err))
+    (when-let [default-on-error (:on-error @app-state)]
+      (re-frame/dispatch (conj default-on-error err)))))
 
 
 (defn signup
   "Signs up using username password"
   [web-auth {:keys [username email password connection metadata]}
-   on-signup on-error]
-  (.signup web-auth (clj->js
-                     (remove-nils-and-empty
-                      {:username      username
-                       :email         email
-                       :password      password
-                       :connection    connection
-                       :user_metadata metadata}))
+   on-success on-error]
+  (.signup web-auth (*clj->js
+                     {:username      username
+                      :email         email
+                      :password      password
+                      :connection    connection
+                      :user_metadata metadata})
            (fn [err]
-             (when err
-               (re-frame/dispatch (conj on-error err))
-               (re-frame/dispatch on-signup)))))
+             (if err
+               (dispatch-error on-error err)
+               (re-frame/dispatch on-success)))))
 
 
 (defn login
   "Logs in user username and password"
   [web-auth {:keys [username email password connection]}
    on-authenticated on-error]
-  (.login web-auth (clj->js
-                    (remove-nils-and-empty
-                     {:username username
-                      :email    email
-                      :password password
-                      :realm    connection}))
+  (.login web-auth (*clj->js
+                    {:username username
+                     :email    email
+                     :password password
+                     :realm    connection})
           (auth-results-cb on-authenticated
                            on-error)))
 
@@ -192,14 +216,47 @@
   "Requests a password reset"
   [web-auth {:keys [email connection]}
    on-success on-error]
-  (.changePassword web-auth (clj->js
-                             (remove-nils-and-empty
-                              {:email      email
-                               :connection connection}))
+  (.changePassword web-auth (*clj->js
+                             {:email      email
+                              :connection connection})
                    (fn [err resp]
                      (if err
-                       (re-frame/dispatch (conj on-error err))
+                       (dispatch-error on-error err)
                        (re-frame/dispatch (conj on-success resp))))))
+
+
+;; App boot fn
+
+(defn maybe-auth-result
+  "Tries to fetch auth results from local storage"
+  []
+  (when-let [v (.getItem (.-localStorage js/window)
+                         local-storage-key)]
+    (*js->clj (.parse js/JSON v))))
+
+
+(defn init-app
+  "A more substantial app boot, including loading stored credentials"
+  [auth0-info {:keys [on-authenticated on-error]}]
+  (swap! app-state assoc :info auth0-info)
+  (when on-authenticated
+    (swap! app-state assoc :on-authenticated on-authenticated))
+  (when on-error
+    (swap! app-state assoc :on-error on-error))
+  (reset! web-auth-instance
+          (web-auth auth0-info))
+  (let [hash   (-> js/window .-location .-hash)
+        stored (maybe-auth-result)]
+    (cond
+      ;; Hash fragment in the URL
+      (> (count hash) 100)
+      (parse-hash @web-auth-instance
+                  nil
+                  on-authenticated
+                  on-error)
+      ;; Local storage
+      stored
+      (re-frame/dispatch (conj on-authenticated stored)))))
 
 
 ;; Registering re-frame effects
@@ -241,8 +298,11 @@
 (re-frame/reg-fx
  ::logout
  (fn [options]
+   (.removeItem (.-localStorage js/window)
+                (local-storage-key))
    (logout @web-auth-instance
-           options)))
+           (merge {:client-id (:client-id @app-state)}
+                  options))))
 
 
 (re-frame/reg-fx
