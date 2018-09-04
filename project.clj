@@ -5,7 +5,7 @@
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/clojurescript "1.9.946"]
-                 [cljsjs/auth0 "9.2.1-0"]
+                 [cljsjs/auth0 "9.5.1-1"]
                  [re-frame "0.10.4"]]
   :min-lein-version "2.7.1"
   :cljsbuild {:builds {}} ; prevent https://github.com/emezeske/lein-cljsbuild/issues/413
