@@ -1,13 +1,12 @@
 (ns re-auth0.core
   (:require [cljsjs.auth0]
-            [clojure.walk :as walk]
             [re-frame.core :as re-frame]))
 
 
 (defonce web-auth-instance (atom nil))
 
 
-(defonce auth0-app-state (atom {}))
+(defonce app-state (atom {}))
 
 
 (defn local-storage-key []
@@ -24,14 +23,10 @@
 (defn remove-nils-and-empty
   "Take a map, and remove all nil or empty values"
   [m]
-  (let [f (fn [[k v]]
-            (when-not (or (nil? v) (empty? v))
-              [k v]))]
-    (walk/postwalk (fn [x]
-                     (if (map? x)
-                       (into {} (map f x))
-                       x))
-                   m)))
+  (->> m
+       (filter (fn [[k v]]
+                 (not (or (nil? v) (empty? v)))))
+       (into {})))
 
 
 (defn *clj->js
@@ -104,20 +99,32 @@
                                on-error)))
 
 
+(defn popup-preload
+  "Preloads the popup window, to get around blockers"
+  []
+  (swap! app-state
+         assoc :popup-handler
+         (.preload (.-popup @web-auth-instance))))
+
+
 (defn popup-authorize
   "Popup variant"
   [web-auth {:keys [audience connection scope response-type
                     client-id redirect-uri leeway state]}
    on-authenticated on-error]
   (.authorize (.-popup web-auth)
-              (*clj->js {:audience     audience
-                         :connection   connection
-                         :scope        scope
-                         :responseType response-type
-                         :clientID     client-id
-                         :redirectUri  redirect-uri
-                         :leeway       leeway
-                         :state        state})
+              (let [opts          (*clj->js {:audience     audience
+                                             :connection   connection
+                                             :scope        scope
+                                             :responseType response-type
+                                             :clientID     client-id
+                                             :redirectUri  redirect-uri
+                                             :leeway       leeway
+                                             :state        state})
+                    popup-handler (:popup-handler @app-state)]
+                (when popup-handler
+                  (aset opts "popupHandler" popup-handler))
+                opts)
               (auth-results-cb on-authenticated
                                on-error)))
 
@@ -231,7 +238,7 @@
   "Tries to fetch auth results from local storage"
   []
   (when-let [v (.getItem (.-localStorage js/window)
-                         local-storage-key)]
+                         (local-storage-key))]
     (*js->clj (.parse js/JSON v))))
 
 
