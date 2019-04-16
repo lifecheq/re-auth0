@@ -52,6 +52,7 @@
 (defn auth-results-cb
   [on-auth-result on-error]
   (fn [err auth-result]
+    (swap! app-state dissoc :popup-handler)
     (if err
       (if on-error
         (re-frame/dispatch (conj on-error (*js->clj err)))
@@ -102,9 +103,11 @@
 (defn popup-preload
   "Preloads the popup window, to get around blockers"
   []
-  (swap! app-state
-         assoc :popup-handler
-         (.preload (.-popup @web-auth-instance))))
+  (if (:popup-handler @app-state)
+    (js/console.warn "Popup handler already exists. Not creating another.")
+    (swap! app-state
+           assoc :popup-handler
+           (.preload (.-popup @web-auth-instance)))))
 
 
 (defn popup-authorize
