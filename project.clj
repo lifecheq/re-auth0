@@ -1,4 +1,4 @@
-(defproject lifecheq/re-auth0 "0.1.3-SNAPSHOT"
+(defproject lifecheq/re-auth0 "0.1.3"
   :description "re-frame effects for Auth0"
   :url "https://github.com/lifecheq/re-auth0"
   :license {:name "Eclipse Public License"
