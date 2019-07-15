@@ -113,13 +113,14 @@
 
 (defn popup-authorize
   "Popup variant"
-  [web-auth {:keys [audience connection scope response-type
+  [web-auth {:keys [audience connection scope response-type mode
                     client-id redirect-uri leeway state]}
    on-authenticated on-error]
   (.authorize (.-popup web-auth)
               (let [opts          (*clj->js {:audience     audience
                                              :connection   connection
                                              :scope        scope
+                                             :mode         mode
                                              :responseType response-type
                                              :clientID     client-id
                                              :redirectUri  redirect-uri
