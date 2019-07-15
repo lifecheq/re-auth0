@@ -84,13 +84,14 @@
 
 (defn authorize
   "The basic authorize"
-  [web-auth {:keys [audience connection scope response-type
+  [web-auth {:keys [audience connection scope response-type mode
                     client-id redirect-uri leeway state]}
    on-authenticated on-error]
   (.authorize web-auth (*clj->js
                         {:audience     audience
                          :connection   connection
                          :scope        scope
+                         :mode         mode
                          :responseType response-type
                          :clientID     client-id
                          :redirectUri  redirect-uri
