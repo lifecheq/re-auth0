@@ -3,10 +3,10 @@
   :url "https://github.com/lifecheq/re-auth0"
   :license {:name "Eclipse Public License"
             :url  "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.9.0"]
-                 [org.clojure/clojurescript "1.9.946"]
-                 [cljsjs/auth0 "9.5.1-1"]
-                 [re-frame "0.10.4"]]
+  :dependencies [[org.clojure/clojure "1.10.1"]
+                 [org.clojure/clojurescript "1.10.597"]
+                 [cljsjs/auth0 "9.12.2-0"]
+                 [re-frame "0.12.0"]]
   :min-lein-version "2.7.1"
   :cljsbuild {:builds {}} ; prevent https://github.com/emezeske/lein-cljsbuild/issues/413
   :source-paths ["src" "target/classes"]
